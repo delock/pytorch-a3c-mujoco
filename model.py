@@ -37,26 +37,26 @@ class ActorCritic(torch.nn.Module):
     def __init__(self, num_inputs, action_space):
         super(ActorCritic, self).__init__()
 
-	self.linear1 = nn.Linear(num_inputs, 200)
+        self.linear1 = nn.Linear(num_inputs, 200)
         self.lstm = nn.LSTMCell(200, 128)
         num_outputs = action_space.shape[0]
-	# Actor
-	self.mu_linear = nn.Linear(128, num_outputs)
-	self.sigma_sq_linear = nn.Linear(128, num_outputs)
-	# Critic
-	self.value_linear = nn.Linear(128, 1)
+        # Actor
+        self.mu_linear = nn.Linear(128, num_outputs)
+        self.sigma_sq_linear = nn.Linear(128, num_outputs)
+        # Critic
+        self.value_linear = nn.Linear(128, 1)
 
-	# initialize weight
+        # initialize weight
         self.apply(weights_init)
-	self.mu_linear.weight.data = normalized_columns_initializer(
-				self.mu_linear.weight.data, 0.01)
-	self.sigma_sq_linear.weight.data = normalized_columns_initializer(
-				self.sigma_sq_linear.weight.data, 0.01)
-	self.mu_linear.bias.data.fill_(0)
-	self.sigma_sq_linear.bias.data.fill_(0)	
+        self.mu_linear.weight.data = normalized_columns_initializer(
+                                self.mu_linear.weight.data, 0.01)
+        self.sigma_sq_linear.weight.data = normalized_columns_initializer(
+                                self.sigma_sq_linear.weight.data, 0.01)
+        self.mu_linear.bias.data.fill_(0)
+        self.sigma_sq_linear.bias.data.fill_(0)
 
         self.value_linear.weight.data = normalized_columns_initializer(
-            			self.value_linear.weight.data, 1.0)
+                                self.value_linear.weight.data, 1.0)
         self.value_linear.bias.data.fill_(0)
 
         self.lstm.bias_ih.data.fill_(0)
@@ -66,9 +66,9 @@ class ActorCritic(torch.nn.Module):
 
     def forward(self, inputs):
         inputs, (hx, cx) = inputs
-	x = F.relu(self.linear1(inputs))
-	x = x.view(-1, 200)
-	hx, cx = self.lstm(x, (hx, cx))
-	x = hx
-	
-	return self.value_linear(x), self.mu_linear(x), self.sigma_sq_linear(x), (hx, cx)
+        x = F.relu(self.linear1(inputs))
+        x = x.view(-1, 200)
+        hx, cx = self.lstm(x, (hx, cx))
+        x = hx
+
+        return self.value_linear(x), self.mu_linear(x), self.sigma_sq_linear(x), (hx, cx)

@@ -8,7 +8,7 @@ class SharedRMSprop(optim.RMSprop):
     """
 
     def __init__(self, params, lr=1e-2, alpha=0.99, eps=1e-8, weight_decay=0, momentum=0, centered=False):
-	super(SharedRMSprop, self).__init__(params, lr, alpha, eps, weight_decay, momentum, centered)
+        super(SharedRMSprop, self).__init__(params, lr, alpha, eps, weight_decay, momentum, centered)
 
     def __setstate__(self, state):
         super(SharedRMSprop, self).__setstate__(state)
@@ -20,7 +20,7 @@ class SharedRMSprop(optim.RMSprop):
                 state['square_avg'].share_memory_()
                 state['step'].share_memory_()
                 state['grad_avg'].share_memory_()
-		state['momentum_buffer'].share_memory_()
+                state['momentum_buffer'].share_memory_()
 
     def step(self, closure=None):
         """Performs a single optimization step.

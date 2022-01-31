@@ -45,9 +45,10 @@ def train(rank, args, shared_model, optimizer=None):
     while True:
         episode_length += 1
         # Sync with the shared model every iteration
-        model.load_state_dict(shared_model.state_dict())
+        state_dict = shared_model.state_dict()
+        model.load_state_dict(state_dict)
         if done:
-	    # initialization
+            # initialization
             cx = Variable(torch.zeros(1, 128))
             hx = Variable(torch.zeros(1, 128))
         else:
@@ -60,23 +61,23 @@ def train(rank, args, shared_model, optimizer=None):
         entropies = []
 
         for step in range(args.num_steps):
-	    # for mujoco, env returns DoubleTensor
+            # for mujoco, env returns DoubleTensor
             value, mu, sigma_sq, (hx, cx) = model(
                 (Variable(state.float().unsqueeze(0).float()), (hx, cx)))
             sigma_sq = F.softplus(sigma_sq)
-	    eps = torch.randn(mu.size())
-	    # calculate the probability
-	    action = (mu + sigma_sq.sqrt()*Variable(eps)).data
-	    prob = normal(action, mu, sigma_sq)
-	    entropy = -0.5*((sigma_sq+2*pi.expand_as(sigma_sq)).log()+1)
+            eps = torch.randn(mu.size())
+            # calculate the probability
+            action = (mu + sigma_sq.sqrt()*Variable(eps)).data
+            prob = normal(action, mu, sigma_sq)
+            entropy = -0.5*((sigma_sq+2*pi.expand_as(sigma_sq)).log()+1)
 
             entropies.append(entropy)
             log_prob = prob.log()
 
-            state, reward, done, _ = env.step(action.numpy())
-	    # prevent stuck agents
+            state, reward, done, _ = env.step(action[0].numpy())
+            # prevent stuck agents
             done = done or episode_length >= args.max_episode_length
-	    # reward shaping
+            # reward shaping
             reward = max(min(reward, 1), -1)
 
             if done:
@@ -101,21 +102,21 @@ def train(rank, args, shared_model, optimizer=None):
         value_loss = 0
         R = Variable(R)
         gae = torch.zeros(1, 1)
-	# calculate the rewards from the terminal state
+        # calculate the rewards from the terminal state
         for i in reversed(range(len(rewards))):
             R = args.gamma * R + rewards[i]
             advantage = R - values[i]
             value_loss = value_loss + 0.5 * advantage.pow(2)
 
             # Generalized Advantage Estimataion
-	    # convert the data into xxx.data will stop the gradient
+            # convert the data into xxx.data will stop the gradient
             delta_t = rewards[i] + args.gamma * \
                 values[i + 1].data - values[i].data
             gae = gae * args.gamma * args.tau + delta_t
 
-	    # for Mujoco, entropy loss lower to 0.0001
+            # for Mujoco, entropy loss lower to 0.0001
             policy_loss = policy_loss - (log_probs[i]*Variable(gae).expand_as(log_probs[i])).sum() \
-					- (0.0001*entropies[i]).sum()
+                                        - (0.0001*entropies[i]).sum()
 
         optimizer.zero_grad()
 
