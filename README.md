@@ -2,8 +2,7 @@
 
 <p><img src="asset/logo.png" align="middle"></p>
 
-
-***Disclaimer: my implementation right now is unstable (you ca refer to the learning curve below), I'm not sure if it's my problems. All comments are welcomed and feel free to contact me!***
+This repo is a fork of a3c for mujoco from https://github.com/andrewliao11/pytorch-a3c-mujoco , enabled for latest mujoco free version (210) and fixed some compatibility bugs.
 
 This code aims to solve some control problems, espicially in Mujoco, and is highly based on [pytorch-a3c](https://github.com/ikostrikov/pytorch-a3c). What's difference between this repo and pytorch-a3c:
 
@@ -19,26 +18,21 @@ Note that this repo is only compatible with Mujoco in OpenAI gym. If you want to
 
 There're three tasks/modes for you: train, eval, develop.
 
-- train:
-```
-python main.py --env-name InvertedPendulum-v1 --num-processes 16 --task train
-```
-- eval:
-```
-python main.py --env-name InvertedPendulum-v1 --task eval --display True --load_ckpt ckpt/a3c/InvertedPendulum-v1.a3c.100 
-```
+At current stage only develop mode is enabled.  Only single worker is supported right now.   Test and checkpoint will be conducted every save_freq iterations
 
 You can choose to display or not using ```display flags```
 
 - develop:
 ```
-python main.py --env-name InvertedPendulum-v1 --num-processes 16 --task develop
+python main.py --env-name InvertedPendulum-v2 --task develop --save_freq 1000 --display True
 ```
 
 In some case that you want to check if you code runs as you want, you might resort to ```pdb```. Here, I provide a develop mode, which only runs in one thread (easy to debug).
 
 
 ## Experiment results
+
+Experiment result of this fork to be added later
 
 ### learning curve
 
