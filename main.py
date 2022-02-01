@@ -88,4 +88,4 @@ if __name__ == '__main__':
         shared_model.load_state_dict(torch.load(args.load_ckpt))
         test(args.num_processes, args, shared_model)
     elif args.task == 'develop':
-        train(0, args, shared_model, optimizer)
+        train(-1, args, shared_model, optimizer)

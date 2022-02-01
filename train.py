@@ -1,6 +1,7 @@
 import math
 import os
 import sys
+import time
 
 import torch
 import torch.nn.functional as F
@@ -9,7 +10,27 @@ from envs import create_atari_env
 from model import ActorCritic
 from torch.autograd import Variable
 from torchvision import datasets, transforms
+from test import test
 import pdb
+
+def setup(args):
+    # logging
+    log_dir = os.path.join('logs', args.model_name)
+    if not os.path.exists(log_dir):
+        os.mkdir(log_dir)
+    log_filename = args.env_name+"."+args.model_name+".log"
+    f = open(os.path.join(log_dir, log_filename), "w")
+    # model saver
+    ckpt_dir = os.path.join('ckpt', args.model_name)
+    if not os.path.exists(ckpt_dir):
+        os.mkdir(ckpt_dir)
+    ckpt_filename = args.env_name+"."+args.model_name+".pkl"
+    return (f, os.path.join(ckpt_dir, ckpt_filename)), (log_dir, ckpt_dir)
+
+def get_checkpoint_name(args, i):
+    ckpt_dir = os.path.join('ckpt', args.model_name)
+    ckpt_filename = args.env_name+"."+args.model_name+"."+str(i)+".pkl"
+    return os.path.join(ckpt_dir, ckpt_filename)
 
 # global variable pi
 pi = Variable(torch.FloatTensor([math.pi]))
@@ -29,6 +50,7 @@ def train(rank, args, shared_model, optimizer=None):
 
     env = create_atari_env(args.env_name)
     env.seed(args.seed + rank)
+    test_env = create_atari_env(args.env_name)
 
     model = ActorCritic(env.observation_space.shape[0], env.action_space)
 
@@ -36,12 +58,15 @@ def train(rank, args, shared_model, optimizer=None):
         optimizer = optim.Adam(shared_model.parameters(), lr=args.lr)
 
     model.train()
+    (f, ckpt_path), (log_dir, ckpt_dir) = setup(args)
 
     state = env.reset()
     state = torch.from_numpy(state)
     done = True
 
     episode_length = 0
+    iteration = 0
+    t0 = time.time()
     while True:
         episode_length += 1
         # Sync with the shared model every iteration
@@ -125,3 +150,15 @@ def train(rank, args, shared_model, optimizer=None):
 
         ensure_shared_grads(model, shared_model)
         optimizer.step()
+        if iteration % args.save_freq == 0:
+            t1 = time.time()
+            duration = t1 - t0
+            torch.save(model.state_dict(), get_checkpoint_name(args, iteration))
+            if iteration == 0:
+                print ("Saving checkpoint of iteration {}, value_loss = {}, policy_loss = {}.".format(iteration, value_loss[0][0], policy_loss))
+            else:
+                print ("Saving checkpoint of iteration {}, value_loss = {}, policy_loss = {}, throughput = {}.".format(iteration, value_loss[0][0], policy_loss, int(args.save_freq/duration*10)/10))
+            if rank == -1:  # develop mode
+                test(rank, args, model, test_env)
+            t0 = t1
+        iteration += 1

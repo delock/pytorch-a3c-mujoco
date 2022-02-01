@@ -32,11 +32,12 @@ def normal(x, mu, sigma_sq):
     b = 1/(2*sigma_sq*pi).sqrt()
     return a*b
 
-def test(rank, args, shared_model):
+def test(rank, args, shared_model, env = None):
 
     torch.manual_seed(args.seed + rank)
 
-    env = create_atari_env(args.env_name)
+    if env == None:
+        env = create_atari_env(args.env_name)
     env.seed(args.seed + rank)
 
     model = ActorCritic(env.observation_space.shape[0], env.action_space)
@@ -78,7 +79,7 @@ def test(rank, args, shared_model):
             # calculate the probability
             action = (mu + sigma_sq.sqrt()*Variable(eps)).data
 
-            state, reward, done, _ = env.step(action[0, 0])
+            state, reward, done, _ = env.step(action[0])
             if args.display:
                 env.render()
             done = done or episode_length >= args.max_episode_length
@@ -111,10 +112,14 @@ def test(rank, args, shared_model):
                 state = env.reset()
                 if args.task == 'train':
                     time.sleep(60)
+                elif args.task == 'develop':
+                    f.close()
+                    break
 
             state = torch.from_numpy(state)
     except KeyboardInterrupt:
         env.close()
         f.close()
         torch.save(model.state_dict(), ckpt_path)
+    return env
 
