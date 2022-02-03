@@ -9,9 +9,9 @@ import torch.optim as optim
 from envs import create_atari_env
 from model import ActorCritic
 from torch.autograd import Variable
-from torchvision import datasets, transforms
 from test import test
 import pdb
+
 
 def setup(args):
     # logging
@@ -45,12 +45,13 @@ def normal(x, mu, sigma_sq):
     b = 1/(2*sigma_sq*pi.expand_as(sigma_sq)).sqrt()
     return a*b
 
-def train(rank, args, shared_model, optimizer=None):
+def train_loop(rank, args, shared_model, optimizer=None):
     torch.manual_seed(args.seed + rank)
+    test_env = create_atari_env(args.env_name)
+    test_env.render()
 
     env = create_atari_env(args.env_name)
     env.seed(args.seed + rank)
-    test_env = create_atari_env(args.env_name)
 
     model = ActorCritic(env.observation_space.shape[0], env.action_space)
 

@@ -9,7 +9,6 @@ from gym import wrappers
 from envs import create_atari_env
 from model import ActorCritic
 from torch.autograd import Variable
-from torchvision import datasets, transforms
 import time
 from collections import deque
 

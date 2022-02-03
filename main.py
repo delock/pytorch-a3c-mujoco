@@ -10,9 +10,10 @@ import torch.optim as optim
 import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.nn.functional as F
+import env
 from envs import create_atari_env
 from model import ActorCritic
-from train import train
+from train import train_loop
 from test import test
 import my_optim
 import pdb
@@ -50,12 +51,15 @@ parser.add_argument('--save_freq', type=int, default=20,
 parser.add_argument('--task', choices=['train', 'eval', 'develop'], default='train', 
                     help='if use multi thread to train (default:True)')
 parser.add_argument('--load_ckpt', type=str, default='ckpt/a3c/InvertedPendulum-v1.a3c.0.pkl')
+parser.add_argument('--name', type=str, default=None)
 
 if __name__ == '__main__':
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
 
+    if args.name == None:
+        args.name = args.env_name
     env = create_atari_env(args.env_name)
 
     shared_model = ActorCritic(
@@ -77,15 +81,15 @@ if __name__ == '__main__':
             p.start()
             processes.append(p)
             for rank in range(0, args.num_processes):
-                p = mp.Process(target=train, args=(rank, args, shared_model, optimizer))
+                p = mp.Process(target=train_loop, args=(rank, args, shared_model, optimizer))
                 p.start()
                 processes.append(p)
             for p in processes:
                 p.join()
         else:
-            train(0, args, shared_model, optimizer)
+            train_loop(0, args, shared_model, optimizer)
     elif args.task == 'eval':
         shared_model.load_state_dict(torch.load(args.load_ckpt))
         test(args.num_processes, args, shared_model)
     elif args.task == 'develop':
-        train(-1, args, shared_model, optimizer)
+        train_loop(-1, args, shared_model, optimizer)
