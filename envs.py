@@ -6,10 +6,8 @@ import pdb
 # Taken from https://github.com/openai/universe-starter-agent
 def create_atari_env(env_id):
     env = gym.make(env_id)
-    if len(env.observation_space.shape) > 1:
-        env = Vectorize(env)
-        env = Unvectorize(env)
     return env
+
 # process each frame
 def _process_frame42(frame):
     frame = frame[34:34 + 160, :160]
