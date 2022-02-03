@@ -32,14 +32,14 @@ def get_checkpoint_name(args, i):
     ckpt_filename = args.env_name+"."+args.model_name+"."+str(i)+".pkl"
     return os.path.join(ckpt_dir, ckpt_filename)
 
-# global variable pi
-pi = Variable(torch.FloatTensor([math.pi]))
 def ensure_shared_grads(model, shared_model):
     for param, shared_param in zip(model.parameters(), shared_model.parameters()):
         if shared_param.grad is not None:
             return
         shared_param._grad = param.grad
 
+# global variable pi
+pi = Variable(torch.FloatTensor([math.pi]))
 def normal(x, mu, sigma_sq):
     a = (-1*(Variable(x)-mu).pow(2)/(2*sigma_sq)).exp()
     b = 1/(2*sigma_sq*pi.expand_as(sigma_sq)).sqrt()
