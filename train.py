@@ -48,7 +48,6 @@ def normal(x, mu, sigma_sq):
 def train_loop(rank, args, shared_model, optimizer=None):
     torch.manual_seed(args.seed + rank)
     test_env = create_atari_env(args.env_name)
-    test_env.render()
 
     env = create_atari_env(args.env_name)
     env.seed(args.seed + rank)
