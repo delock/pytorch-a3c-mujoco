@@ -2,6 +2,7 @@ import math
 import os
 import sys
 import time
+import os.path
 
 import torch
 import torch.nn.functional as F
@@ -38,6 +39,44 @@ def ensure_shared_grads(model, shared_model):
             return
         shared_param._grad = param.grad
 
+def save_grads(model, rank):
+    filename = 'grads-{}.pt'.format(rank)
+    while os.path.exists(filename):
+        pass
+    grads = []
+    for param in model.parameters():
+        grads.append(param.grad)
+    torch.save(grads, '_{}'.format(filename))
+    os.rename('_{}'.format(filename), filename)
+
+def load_grads(model, rank):
+    filename = 'grads-{}.pt'.format(rank)
+    if not os.path.exists(filename):
+        return
+    grads = torch.load(filename)
+    i = 0
+    for param in model.parameters():
+        #if param.grad is not None:
+        #    print ('Model grad is None')
+        #    return
+        param._grad = grads[i]
+        i += 1
+    os.remove(filename)
+
+def optimize_loop(world_size, model, optimizer):
+    while True:
+        for i in range(world_size):
+            optimizer.zero_grad()
+            load_grads(model, i)
+            optimizer.step()
+        torch.save(model.state_dict(), '_model.pt')
+        os.rename('_model.pt', 'model.pt')
+
+def load_model(model):
+    while not os.path.exists('model.pt'):
+        pass
+    model.load_state_dict(torch.load('model.pt'))
+
 # global variable pi
 pi = Variable(torch.FloatTensor([math.pi]))
 def normal(x, mu, sigma_sq):
@@ -70,8 +109,7 @@ def train_loop(rank, args, shared_model, optimizer=None):
     while True:
         episode_length += 1
         # Sync with the shared model every iteration
-        state_dict = shared_model.state_dict()
-        model.load_state_dict(state_dict)
+        load_model(model)
         if done:
             # initialization
             cx = Variable(torch.zeros(1, 128))
@@ -143,14 +181,11 @@ def train_loop(rank, args, shared_model, optimizer=None):
             policy_loss = policy_loss - (log_probs[i]*Variable(gae).expand_as(log_probs[i])).sum() \
                                         - (0.0001*entropies[i]).sum()
 
-        optimizer.zero_grad()
-
         (policy_loss + 0.5 * value_loss).backward()
         torch.nn.utils.clip_grad_norm(model.parameters(), 40)
 
-        ensure_shared_grads(model, shared_model)
-        optimizer.step()
-        if iteration % args.save_freq == 0:
+        save_grads(model, rank)
+        if rank == 0 and iteration % args.save_freq == 0:
             t1 = time.time()
             duration = t1 - t0
             torch.save(model.state_dict(), get_checkpoint_name(args, iteration))
@@ -162,3 +197,4 @@ def train_loop(rank, args, shared_model, optimizer=None):
                 test(rank, args, model, test_env)
             t0 = t1
         iteration += 1
+        print (iteration)

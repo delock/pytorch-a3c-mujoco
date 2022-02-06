@@ -13,7 +13,7 @@ import torch.nn.functional as F
 import env
 from envs import create_atari_env
 from model import ActorCritic
-from train import train_loop
+from train import train_loop, optimize_loop
 from test import test
 import my_optim
 import pdb
@@ -48,7 +48,7 @@ parser.add_argument('--display', type=bool, default=False,
                     help='whether to use monitor and render ot not (default:False)')
 parser.add_argument('--save_freq', type=int, default=20, 
                     help='how many intervals to save teh model (default:20)')
-parser.add_argument('--task', choices=['train', 'eval', 'develop'], default='train', 
+parser.add_argument('--task', choices=['train', 'eval', 'develop', 'optimize'], default='train', 
                     help='if use multi thread to train (default:True)')
 parser.add_argument('--load_ckpt', type=str, default='ckpt/a3c/InvertedPendulum-v1.a3c.0.pkl')
 parser.add_argument('--name', type=str, default=None)
@@ -93,3 +93,5 @@ if __name__ == '__main__':
         test(args.num_processes, args, shared_model)
     elif args.task == 'develop':
         train_loop(-1, args, shared_model, optimizer)
+    elif args.task == 'optimize':
+        optimize_loop(args.num_processes, shared_model, optimizer)
