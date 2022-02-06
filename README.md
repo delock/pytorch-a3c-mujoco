@@ -32,6 +32,16 @@ This project also defines it's own environements under env/ directory.   Train a
 python main.py --env-name InvertedPendulum-down --task develop --save_freq 1000 --display True
 ```
 
+You can also train a half cheetah
+```
+python main.py --env-name HalfCheetah-v2 --task develop --save_freq 1000 --display True
+```
+
+Or a humanoid
+```
+python main.py --env-name Humanoid-v2 --task develop --save_freq 1000 --display True
+```
+
 This is a much harder task because the pole is initially facing down, so the agent needs to learn to 'swing' the pole up then keep it there.  You can tweek this task by set a proper reward function.
 
 In some case that you want to check if you code runs as you want, you might resort to ```pdb```. Here, I provide a develop mode, which only runs in one thread (easy to debug).
