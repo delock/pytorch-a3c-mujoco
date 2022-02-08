@@ -97,9 +97,9 @@ def test(rank, args, shared_model, env = None):
                     print ("Testing over %d episodes, Average reward = %f" % \
                                         (episode_i, sum(reward_list)/episode_i,))
                     break
-                if episode_i%args.save_freq == 0:
-                    torch.save(model.state_dict(), os.path.join(ckpt_dir, args.env_name+\
-                                "."+args.model_name+"."+str(episode_i)+".pkl"))
+                #if episode_i%args.save_freq == 0:
+                #    torch.save(model.state_dict(), os.path.join(ckpt_dir, args.env_name+\
+                #                "."+args.model_name+"."+str(episode_i)+".pkl"))
                 info_str = "Time {}, episode reward {}, episode length {}".format(
                         time.strftime("%Hh %Mm %Ss",time.gmtime(time.time() - start_time)),
                         reward_sum, episode_length)
@@ -110,8 +110,6 @@ def test(rank, args, shared_model, env = None):
                 actions.clear()
                 state = env.reset()
                 if args.task == 'train':
-                    time.sleep(60)
-                elif args.task == 'develop':
                     f.close()
                     break
 

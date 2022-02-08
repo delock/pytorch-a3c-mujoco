@@ -46,11 +46,11 @@ def save_grads(model, rank):
     grads = []
     for param in model.parameters():
         grads.append(param.grad)
-    torch.save(grads, '_{}'.format(filename))
-    os.rename('_{}'.format(filename), filename)
+    torch.save(grads, 'sync/_{}'.format(filename))
+    os.rename('sync/_{}'.format(filename), 'sync/{}'.format(filename))
 
 def load_grads(model, rank):
-    filename = 'grads-{}.pt'.format(rank)
+    filename = 'sync/grads-{}.pt'.format(rank)
     if not os.path.exists(filename):
         return
     grads = torch.load(filename)
@@ -69,13 +69,13 @@ def optimize_loop(world_size, model, optimizer):
             optimizer.zero_grad()
             load_grads(model, i)
             optimizer.step()
-        torch.save(model.state_dict(), '_model.pt')
-        os.rename('_model.pt', 'model.pt')
+        torch.save(model.state_dict(), 'sync/_model.pt')
+        os.rename('sync/_model.pt', 'sync/model.pt')
 
 def load_model(model):
-    while not os.path.exists('model.pt'):
+    while not os.path.exists('sync/model.pt'):
         pass
-    model.load_state_dict(torch.load('model.pt'))
+    model.load_state_dict(torch.load('sync/model.pt'))
 
 # global variable pi
 pi = Variable(torch.FloatTensor([math.pi]))
@@ -193,8 +193,9 @@ def train_loop(rank, args, shared_model, optimizer=None):
                 print ("Saving checkpoint of iteration {}, value_loss = {}, policy_loss = {}.".format(iteration, value_loss[0][0], policy_loss))
             else:
                 print ("Saving checkpoint of iteration {}, value_loss = {}, policy_loss = {}, throughput = {}.".format(iteration, value_loss[0][0], policy_loss, int(args.save_freq/duration*10)/10))
-            if rank == -1:  # develop mode
+            if args.display:  # develop mode
                 test(rank, args, model, test_env)
             t0 = t1
         iteration += 1
-        print (iteration)
+        if rank == 0 and iteration % 100 == 0:
+            print ('iteration {}'.format(iteration))
