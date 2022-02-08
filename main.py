@@ -34,8 +34,10 @@ parser.add_argument('--model_name', type=str, default='a3c',
                     help='used to save log file and model (default: a3c)')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-parser.add_argument('--num-processes', type=int, default=4, metavar='N',
-                    help='how many training processes to use (default: 4)')
+parser.add_argument('--world_size', type=int, default=1,
+                    help='number of workers')
+parser.add_argument('--rank', type=int, default=0,
+                    help='rank of this worker')
 parser.add_argument('--num-steps', type=int, default=20, metavar='NS',
                     help='number of forward steps in A3C (default: 20)')
 parser.add_argument('--max-episode-length', type=int, default=10000, metavar='M',
@@ -74,24 +76,11 @@ if __name__ == '__main__':
         optimizer.share_memory()
 
     if args.task == 'train':
-        if args.num_processes > 1:
-            processes = []
-
-            p = mp.Process(target=test, args=(args.num_processes, args, shared_model))
-            p.start()
-            processes.append(p)
-            for rank in range(0, args.num_processes):
-                p = mp.Process(target=train_loop, args=(rank, args, shared_model, optimizer))
-                p.start()
-                processes.append(p)
-            for p in processes:
-                p.join()
-        else:
-            train_loop(0, args, shared_model, optimizer)
+        train_loop(args.rank, args, shared_model, optimizer)
     elif args.task == 'eval':
         shared_model.load_state_dict(torch.load(args.load_ckpt))
-        test(args.num_processes, args, shared_model)
+        test(1, args, shared_model)
     elif args.task == 'develop':
         train_loop(-1, args, shared_model, optimizer)
     elif args.task == 'optimize':
-        optimize_loop(args.num_processes, shared_model, optimizer)
+        optimize_loop(args.world_size, shared_model, optimizer)
