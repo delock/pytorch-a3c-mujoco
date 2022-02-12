@@ -52,7 +52,7 @@ def save_grads(model, rank):
 def load_grads(model, rank):
     filename = 'sync/grads-{}.pt'.format(rank)
     if not os.path.exists(filename):
-        return
+        return False
     grads = torch.load(filename)
     i = 0
     for param in model.parameters():
@@ -62,15 +62,30 @@ def load_grads(model, rank):
         param._grad = grads[i]
         i += 1
     os.remove(filename)
+    return True
 
 def optimize_loop(world_size, model, optimizer):
+    t0 = time.time()
+    optimize_iter = 0
+
+    # sync the initial model
+    torch.save(model.state_dict(), 'sync/_model.pt')
+    os.rename('sync/_model.pt', 'sync/model.pt')
+
     while True:
+        has_update = False
         for i in range(world_size):
             optimizer.zero_grad()
-            load_grads(model, i)
-            optimizer.step()
-        torch.save(model.state_dict(), 'sync/_model.pt')
-        os.rename('sync/_model.pt', 'sync/model.pt')
+            if load_grads(model, i):
+                has_update = True
+                optimizer.step()
+                optimize_iter += 1
+                if optimize_iter % 100 == 0:
+                    t1 = time.time()
+                    print ("optimized {} iterations, throughput = {} iter/s                    ".format(optimize_iter, int(optimize_iter/(t1-t0)*100)/100), end="\r")
+        if has_update:
+            torch.save(model.state_dict(), 'sync/_model.pt')
+            os.rename('sync/_model.pt', 'sync/model.pt')
 
 def load_model(model):
     while not os.path.exists('sync/model.pt'):
@@ -105,11 +120,16 @@ def train_loop(rank, args, shared_model, optimizer=None):
 
     episode_length = 0
     iteration = 0
+    t_load = 0
+    t_save = 0
+    t_learn = 0
     t0 = time.time()
     while True:
+        tb0 = time.time()
         episode_length += 1
         # Sync with the shared model every iteration
         load_model(model)
+        tb1 = time.time()
         if done:
             # initialization
             cx = Variable(torch.zeros(1, 128))
@@ -184,7 +204,13 @@ def train_loop(rank, args, shared_model, optimizer=None):
         (policy_loss + 0.5 * value_loss).backward()
         torch.nn.utils.clip_grad_norm(model.parameters(), 40)
 
+        tb2 = time.time()
         save_grads(model, rank)
+        tb3 = time.time()
+        t_load += tb1-tb0
+        t_save += tb3-tb2
+        t_learn += tb2-tb1
+        t_total = t_load+t_save+t_learn
         if rank == 0 and iteration % args.save_freq == 0:
             t1 = time.time()
             duration = t1 - t0
@@ -192,10 +218,8 @@ def train_loop(rank, args, shared_model, optimizer=None):
             if iteration == 0:
                 print ("Saving checkpoint of iteration {}, value_loss = {}, policy_loss = {}.".format(iteration, value_loss[0][0], policy_loss))
             else:
-                print ("Saving checkpoint of iteration {}, value_loss = {}, policy_loss = {}, throughput = {}.".format(iteration, value_loss[0][0], policy_loss, int(args.save_freq/duration*10)/10))
-            if args.display:  # develop mode
+                print ("Saving checkpoint of iteration {}, value_loss = {}, policy_loss = {}, throughput = {} load:save:learn={}%:{}%:{}%.".format(iteration, value_loss[0][0], policy_loss, int(args.save_freq/duration*10)/10, int(t_load/t_total*100), int(t_save/t_total*100), int(t_learn/t_total*100)))
+            if args.display:
                 test(rank, args, model, test_env)
             t0 = t1
         iteration += 1
-        if rank == 0 and iteration % 100 == 0:
-            print ('iteration {}'.format(iteration))
