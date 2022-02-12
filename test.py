@@ -64,11 +64,11 @@ def test(rank, args, shared_model, env = None):
             # Sync with the shared model
             if done:
                 model.load_state_dict(shared_model.state_dict())
-                cx = Variable(torch.zeros(1, 128), volatile=True)
-                hx = Variable(torch.zeros(1, 128), volatile=True)
+                cx = Variable(torch.zeros(1, 128))
+                hx = Variable(torch.zeros(1, 128))
             else:
-                cx = Variable(cx.data, volatile=True)
-                hx = Variable(hx.data, volatile=True)
+                cx = Variable(cx.data)
+                hx = Variable(hx.data)
 
         # for mujoco, env returns DoubleTensor
             value, mu, sigma_sq, (hx, cx) = model(
