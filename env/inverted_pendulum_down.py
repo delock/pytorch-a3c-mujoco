@@ -2,6 +2,7 @@ import numpy as np
 from gym import utils
 from gym.envs.mujoco import mujoco_env
 import os
+import math
 
 
 # An experimental pendulum that pole start dangled down
@@ -13,20 +14,9 @@ class InvertedPendulumDownEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def step(self, a):
         self.do_simulation(a, self.frame_skip)
         ob = self._get_obs()
-        '''
-        if np.abs(ob[1]) < 0.2:
-            reward = 1
-        else:
-            reward = 0.2/np.abs(ob[1])
-        '''
-        two_pi = 2*3.1415926536
-        val = ob[1]/two_pi
-        val = val - int(val) + 1
-        val = val - int(val)
-        reward = np.abs(2*(0.5-val))
-        #print ("reward = {}, ob[1]={}".format(reward, ob[1]))
-        #reward = min(np.abs(ob[1]-3.14325), 1/(np.abs(ob[2])+np.abs(ob[3])+0.001))
-        #done = True if np.abs(ob[1]) < 0.2 and np.abs(ob[2]) + np.abs(ob[3]) < 0.1 else False
+        reward = math.cos(ob[1]) - 0.01 * pow(ob[3],2) - 0.001 * pow(a[0],2)
+        #print ("reward = {}, val={}".format(reward, ob[1]))
+
         done = False
         return ob, reward, done, {}
 

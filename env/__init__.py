@@ -7,6 +7,6 @@ logger = logging.getLogger(__name__)
 register(
     id="InvertedPendulum-down",
     entry_point="env:InvertedPendulumDownEnv",
-    max_episode_steps=500,
-    reward_threshold=500.0,
+    max_episode_steps=1000,
+    reward_threshold=1000.0,
 )
