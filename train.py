@@ -8,7 +8,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 from envs import create_atari_env
-from model import ActorCritic
+from model import ActorCritic, load_model
 from torch.autograd import Variable
 from test import test
 import pdb
@@ -56,9 +56,6 @@ def load_grads(model, rank):
     grads = torch.load(filename)
     i = 0
     for param in model.parameters():
-        #if param.grad is not None:
-        #    print ('Model grad is None')
-        #    return
         param._grad = grads[i]
         i += 1
     os.remove(filename)
@@ -86,11 +83,6 @@ def optimize_loop(world_size, model, optimizer):
         if has_update:
             torch.save(model.state_dict(), 'sync/_model.pt')
             os.rename('sync/_model.pt', 'sync/model.pt')
-
-def load_model(model):
-    while not os.path.exists('sync/model.pt'):
-        pass
-    model.load_state_dict(torch.load('sync/model.pt'))
 
 # global variable pi
 pi = Variable(torch.FloatTensor([math.pi]))
@@ -217,8 +209,6 @@ def train_loop(rank, args, shared_model, optimizer=None):
             if rank == 0:
                 torch.save(model.state_dict(), get_checkpoint_name(args, iteration))
                 print ("Saving checkpoint of iteration {}, value_loss = {}, policy_loss = {}.".format(iteration, value_loss[0][0], policy_loss))
-                if args.display:
-                    test(rank, args, model, test_env)
             print ("rank {} throughput={} load:save:learn={}:{}:{}                                         ".format(rank, int(args.save_freq/duration*10)/10, int(t_load/t_total*100), int(t_save/t_total*100), int(t_learn/t_total*100)))
             t0 = t1
         iteration += 1

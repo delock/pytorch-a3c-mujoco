@@ -14,7 +14,7 @@ import env
 from envs import create_atari_env
 from model import ActorCritic
 from train import train_loop, optimize_loop
-from test import test
+from test import test_loop
 import my_optim
 import pdb
 
@@ -78,8 +78,7 @@ if __name__ == '__main__':
     if args.task == 'train':
         train_loop(args.rank, args, shared_model, optimizer)
     elif args.task == 'eval':
-        shared_model.load_state_dict(torch.load(args.load_ckpt))
-        test(1, args, shared_model)
+        test_loop(args)
     elif args.task == 'develop':
         train_loop(-1, args, shared_model, optimizer)
     elif args.task == 'optimize':

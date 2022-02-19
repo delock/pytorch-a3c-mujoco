@@ -1,4 +1,5 @@
 import math, pdb
+import os
 
 import numpy as np
 
@@ -31,6 +32,10 @@ def weights_init(m):
         m.weight.data.uniform_(-w_bound, w_bound)
         m.bias.data.fill_(0)
 
+def load_model(model):
+    while not os.path.exists('sync/model.pt'):
+        pass
+    model.load_state_dict(torch.load('sync/model.pt'))
 
 class ActorCritic(torch.nn.Module):
 

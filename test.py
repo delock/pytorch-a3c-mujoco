@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from gym import wrappers
 from envs import create_atari_env
-from model import ActorCritic
+from model import ActorCritic, load_model
 from torch.autograd import Variable
 import time
 from collections import deque
@@ -30,6 +30,79 @@ def normal(x, mu, sigma_sq):
     a = ((Variable(x)-mu).pow(2)/(2*sigma_sq)).exp()
     b = 1/(2*sigma_sq*pi).sqrt()
     return a*b
+
+def test_loop(args, env = None):
+
+    torch.manual_seed(args.seed)
+
+    if env == None:
+        env = create_atari_env(args.env_name)
+    env.seed(args.seed)
+
+    model = ActorCritic(env.observation_space.shape[0], env.action_space)
+
+    model.eval()
+
+    (f, ckpt_path), (log_dir, ckpt_dir) = setup(args)
+    state = env.reset()
+    state = torch.from_numpy(state)
+    reward_sum = 0
+    done = True
+    #env = wrappers.Monitor(env, '/tmp/{}-experiment'.format(args.env_name), force=True)
+    start_time = time.time()
+    # a quick hack to prevent the agent from stucking
+    actions = deque(maxlen=100)
+    episode_i = 0
+    episode_length = 0
+    try:
+        while True:
+            episode_length += 1
+            # Sync with the shared model
+            if done:
+                load_model(model)
+                cx = Variable(torch.zeros(1, 128))
+                hx = Variable(torch.zeros(1, 128))
+            else:
+                cx = Variable(cx.data)
+                hx = Variable(hx.data)
+
+        # for mujoco, env returns DoubleTensor
+            value, mu, sigma_sq, (hx, cx) = model(
+                (Variable(state.float().unsqueeze(0).float()), (hx, cx)))
+            sigma_sq = F.softplus(sigma_sq)
+            eps = torch.randn(mu.size())
+            # calculate the probability
+            action = (mu + sigma_sq.sqrt()*Variable(eps)).data
+
+            state, reward, done, _ = env.step(action[0])
+            if args.display:
+                env.render()
+            done = done or episode_length >= args.max_episode_length
+            reward_sum += reward
+
+            # a quick hack to prevent the agent from stucking
+            actions.append(action[0, 0])
+            if actions.count(actions[0]) == actions.maxlen:
+                done = True
+
+            if done:
+                episode_i += 1
+                info_str = "Time {}, episode reward {}, episode length {}".format(
+                        time.strftime("%Hh %Mm %Ss",time.gmtime(time.time() - start_time)),
+                        reward_sum, episode_length)
+                print(info_str)
+                f.write(info_str+'\n')
+                reward_sum = 0
+                episode_length = 0
+                actions.clear()
+                state = env.reset()
+
+            state = torch.from_numpy(state)
+    except KeyboardInterrupt:
+        env.close()
+        f.close()
+        torch.save(model.state_dict(), ckpt_path)
+    return env
 
 def test(rank, args, shared_model, env = None):
 
