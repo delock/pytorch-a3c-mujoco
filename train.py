@@ -219,6 +219,6 @@ def train_loop(rank, args, shared_model, optimizer=None):
                 print ("Saving checkpoint of iteration {}, value_loss = {}, policy_loss = {}.".format(iteration, value_loss[0][0], policy_loss))
                 if args.display:
                     test(rank, args, model, test_env)
-            print ("rank {} throughput={} load:save:learn={}:{}:{}".format(rank, int(args.save_freq/duration*10)/10, int(t_load/t_total*100), int(t_save/t_total*100), int(t_learn/t_total*100)))
+            print ("rank {} throughput={} load:save:learn={}:{}:{}                                         ".format(rank, int(args.save_freq/duration*10)/10, int(t_load/t_total*100), int(t_save/t_total*100), int(t_learn/t_total*100)))
             t0 = t1
         iteration += 1
