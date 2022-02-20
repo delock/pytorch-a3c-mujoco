@@ -16,36 +16,28 @@ Note that this repo is only compatible with Mujoco in OpenAI gym. If you want to
 
 ## Usage
 
-There're three tasks/modes for you: train, eval, develop.
+A bash script is used to start workers for training, optimizer, and test(display)
 
-At current stage only develop mode is enabled.  Only single worker is supported right now.   Test and checkpoint will be conducted every save_freq iterations
-
-You can choose to display or not using ```display flags```
-
-- develop:
 ```
-python main.py --env-name InvertedPendulum-v2 --task develop --save_freq 1000 --display True
+./run_1_node.sh InvertedPendulum-v2
 ```
 
 This project also defines it's own environements under env/ directory.   Train a custom inverted pendulum environment with
 ```
-python main.py --env-name InvertedPendulum-down --task develop --save_freq 1000 --display True
-```
-
-You can also train a half cheetah
-```
-python main.py --env-name HalfCheetah-v2 --task develop --save_freq 1000 --display True
-```
-
-Or a humanoid
-```
-python main.py --env-name Humanoid-v2 --task develop --save_freq 1000 --display True
+./run_1_node.sh InvertedPendulum-down
 ```
 
 This is a much harder task because the pole is initially facing down, so the agent needs to learn to 'swing' the pole up then keep it there.  You can tweek this task by set a proper reward function.
 
-In some case that you want to check if you code runs as you want, you might resort to ```pdb```. Here, I provide a develop mode, which only runs in one thread (easy to debug).
+You can also train a half cheetah
+```
+./run_1_node.sh HalfCheetah-v2
+```
 
+Or a humanoid
+```
+./run_1_node.sh Humanoid-v2
+```
 
 ## Experiment results
 
@@ -55,44 +47,15 @@ Experiment result of this fork to be added later
 
 The plot of total reward/episode length in 1000 steps:
 
-- InvertedPendulum-v1
-
-![](asset/InvertedPendulum-v1.a3c.log.png)
-
-In InvertedPendulum-v1, total reward exactly equal to episode length.
-
-- InvertedDoublePendulum-v1
-
-![](asset/InvertedDoublePendulum-v1.a3c.log.png)
-
-**Note that the x axis denote the time in minute**
-
-The above curve is plotted from ```python plot.py --log_path ./logs/a3c/InvertedPendulum-v1.a3c.log```
-
+To be added later
 
 ### video
 
-- InvertedPendulum-v1
-
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=E7QlRIkKuXo
-" target="_blank"><img src="http://img.youtube.com/vi/E7QlRIkKuXo/0.jpg" 
-alt="IMAGE ALT TEXT HERE" width="480" height="360" border="10" /></a>
-
-- InvertedDoublePendulum-v1
-
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=WNiitHoz8x4
-" target="_blank"><img src="http://img.youtube.com/vi/WNiitHoz8x4/0.jpg" 
-alt="IMAGE ALT TEXT HERE" width="480" height="360" border="10" /></a>
+To be added later
 
 ## Requirements
-- gym
-- mujoco-py
-- pytorch
-- matplotlib (optional)
-- seaborn (optional)
 
-## TODO
-I implement the ShareRMSProp in ```my_optim.py```, but I haven't tried it yet.
+See INSTALL.md
 
 ## Reference
 - [pytorch-a3c](https://github.com/ikostrikov/pytorch-a3c)
