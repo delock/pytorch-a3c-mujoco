@@ -48,7 +48,6 @@ def test_loop(args, env = None):
     state = torch.from_numpy(state)
     reward_sum = 0
     done = True
-    #env = wrappers.Monitor(env, '/tmp/{}-experiment'.format(args.env_name), force=True)
     start_time = time.time()
     # a quick hack to prevent the agent from stucking
     actions = deque(maxlen=100)
@@ -96,6 +95,7 @@ def test_loop(args, env = None):
                 episode_length = 0
                 actions.clear()
                 state = env.reset()
+                time.sleep(1)
 
             state = torch.from_numpy(state)
     except KeyboardInterrupt:
