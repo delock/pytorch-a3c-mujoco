@@ -42,7 +42,7 @@ def ensure_shared_grads(model, shared_model):
 def save_grads(model, rank):
     filename = 'grads-{}.pt'.format(rank)
     while os.path.exists(filename):
-        pass
+        time.sleep(0.0001)
     grads = []
     for param in model.parameters():
         grads.append(param.grad)
@@ -115,6 +115,8 @@ def train_loop(rank, args, shared_model, optimizer=None):
     t_load = 0
     t_save = 0
     t_learn = 0
+    t_sim = 0
+    t_model = 0
     t0 = time.time()
     while True:
         tb0 = time.time()
@@ -137,6 +139,7 @@ def train_loop(rank, args, shared_model, optimizer=None):
 
         for step in range(args.num_steps):
             # for mujoco, env returns DoubleTensor
+            t_model_0 = time.time()
             value, mu, sigma_sq, (hx, cx) = model(
                 (Variable(state.float().unsqueeze(0).float()), (hx, cx)))
             sigma_sq = F.softplus(sigma_sq)
@@ -149,7 +152,13 @@ def train_loop(rank, args, shared_model, optimizer=None):
             entropies.append(entropy)
             log_prob = prob.log()
 
+            t_model_1 = time.time()
+            t_model += t_model_1 - t_model_0
+
+            t_sim_0 = time.time()
             state, reward, done, _ = env.step(action[0].numpy())
+            t_sim_1 = time.time()
+            t_sim += t_sim_1 - t_sim_0
             # prevent stuck agents
             done = done or episode_length >= args.max_episode_length
             # reward shaping
@@ -169,12 +178,18 @@ def train_loop(rank, args, shared_model, optimizer=None):
 
         R = torch.zeros(1, 1)
         if not done:
+            t_model_0 = time.time()
             value, _, _, _ = model((Variable(state.float().unsqueeze(0)), (hx, cx)))
+            t_model_1 = time.time()
+            t_model += t_model_1 - t_model_0
             R = value.data
 
         values.append(Variable(R))
         policy_loss = 0
         value_loss = 0
+
+        t_model_0 = time.time()
+
         R = Variable(R)
         gae = torch.zeros(1, 1)
         # calculate the rewards from the terminal state
@@ -194,6 +209,8 @@ def train_loop(rank, args, shared_model, optimizer=None):
                                         - (0.0001*entropies[i]).sum()
 
         (policy_loss + 0.5 * value_loss).backward()
+        t_model_1 = time.time()
+        t_model += t_model_1 - t_model_0
         torch.nn.utils.clip_grad_norm_(model.parameters(), 40)
 
         tb2 = time.time()
@@ -209,6 +226,13 @@ def train_loop(rank, args, shared_model, optimizer=None):
             if rank == 0:
                 torch.save(model.state_dict(), get_checkpoint_name(args, iteration))
                 print ("Saving checkpoint of iteration {}, value_loss = {}, policy_loss = {}.".format(iteration, value_loss[0][0], policy_loss))
-            print ("rank {} throughput={} load:save:learn={}:{}:{}                                         ".format(rank, int(args.save_freq/duration*10)/10, int(t_load/t_total*100), int(t_save/t_total*100), int(t_learn/t_total*100)))
+            print ("rank {} throughput={} load:save:learn:NN:sim={}:{}:{}:{}:{}                                         ".format(
+                        rank,
+                        int(args.save_freq/duration*10)/10,
+                        int(t_load/t_total*100),
+                        int(t_save/t_total*100),
+                        int((t_learn-t_sim-t_model)/t_total*100),
+                        int(t_model/t_total*100),
+                        int(t_sim/t_total*100)))
             t0 = t1
         iteration += 1
